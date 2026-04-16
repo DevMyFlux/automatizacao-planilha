@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Excel Data Cleaner</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <h1>Excel Data Cleaner</h1>
+      <p class="app-subtitle">Limpe e padronize suas planilhas diretamente no navegador</p>
+    </header>
+
+    <main class="app-main">
+      <!-- Zona de Drop -->
+      <section id="drop-zone" class="drop-zone" role="region" aria-label="Zona de upload de arquivo">
+        <div class="drop-zone__content">
+          <svg class="drop-zone__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <p class="drop-zone__text">Arraste e solte seu arquivo aqui</p>
+          <p class="drop-zone__subtext">ou</p>
+          <label for="file-input" class="btn btn--primary">Selecionar arquivo</label>
+          <input
+            type="file" id="file-input"
+            class="drop-zone__input"
+            accept=".xlsx,.xls,.csv,.pdf"
+            aria-label="Selecionar arquivo Excel, CSV ou PDF"
+          />
+          <p class="drop-zone__hint">Formatos aceitos: .xlsx, .xls, .csv, .pdf — Máximo 50 MB</p>
+        </div>
+        <div id="file-info" class="file-info hidden" aria-live="polite"></div>
+        <div id="upload-error" class="alert alert--error hidden" role="alert" aria-live="assertive"></div>
+        <div id="upload-warning" class="alert alert--warning hidden" role="alert" aria-live="polite"></div>
+      </section>
+
+      <!-- Seletor de Aba (oculto até carregar arquivo com múltiplas abas) -->
+      <section id="sheet-selector-section" class="sheet-selector hidden" aria-label="Seleção de aba">
+        <label for="sheet-selector" class="sheet-selector__label">Aba:</label>
+        <select id="sheet-selector" class="sheet-selector__select" aria-label="Selecionar aba da planilha"></select>
+      </section>
+
+      <div class="workspace" id="workspace">
+        <!-- Painel de Opções -->
+        <aside id="options-panel" class="options-panel" aria-label="Opções de limpeza">
+          <h2 class="options-panel__title">Opções de Limpeza</h2>
+
+          <div class="options-panel__group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-removeEmptyRows" name="removeEmptyRows" checked />
+              <span>Remover linhas vazias</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-removeEmptyColumns" name="removeEmptyColumns" checked />
+              <span>Remover colunas vazias</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-trimWhitespace" name="trimWhitespace" checked />
+              <span>Remover espaços extras</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-standardizeText" name="standardizeText" />
+              <span>Padronizar capitalização</span>
+            </label>
+
+            <div id="text-case-selector" class="text-case-selector hidden" role="group" aria-label="Modo de capitalização">
+              <label for="opt-textCase" class="text-case-selector__label">Modo:</label>
+              <select id="opt-textCase" name="textCase" aria-label="Selecionar modo de capitalização">
+                <option value="Title">Title Case</option>
+                <option value="UPPER">MAIÚSCULAS</option>
+                <option value="lower">minúsculas</option>
+              </select>
+            </div>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-formatDates" name="formatDates" checked />
+              <span>Formatar datas (DD/MM/AAAA)</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-formatCurrency" name="formatCurrency" checked />
+              <span>Formatar moeda (R$)</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-detectDuplicates" name="detectDuplicates" checked />
+              <span>Detectar duplicatas</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="opt-autoDetectTypes" name="autoDetectTypes" />
+              <span>Detectar tipos de coluna</span>
+            </label>
+          </div>
+
+          <button id="btn-export" class="btn btn--success btn--full" disabled aria-disabled="true">
+            Exportar .xlsx
+          </button>
+          <button id="btn-sample" class="btn btn--outline btn--full" style="margin-top:0.5rem">
+            📥 Baixar planilha de exemplo
+          </button>
+        </aside>
+
+        <!-- Container da Tabela -->
+        <section id="table-section" class="table-section" aria-label="Visualização dos dados">
+          <div id="table-placeholder" class="table-placeholder">
+            <p>Carregue um arquivo para visualizar os dados</p>
+          </div>
+          <div id="table-container" class="table-container hidden" role="region" aria-label="Tabela de dados limpos" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <!-- Painel de Resumo -->
+      <section id="summary-panel" class="summary-panel hidden" aria-label="Resumo de alterações" aria-live="polite">
+        <h2 class="summary-panel__title">Resumo de Alterações</h2>
+        <div id="summary-stats" class="summary-stats"></div>
+        <div id="summary-log" class="summary-log" role="list" aria-label="Log de alterações"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- SheetJS via CDN -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+  <!-- PDF.js via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script type="module" src="src/App.js" defer></script>
+</body>
+</html>
